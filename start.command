@@ -12,6 +12,6 @@ export HF_HUB_DISABLE_TELEMETRY=1
 export DO_NOT_TRACK=1
 export TMPDIR="$PWD/data/tmp"
 mkdir -p "$TMPDIR"
-uv sync --python 3.13 --no-dev
-echo "STT AI: http://127.0.0.1:8765 (ukončení: Ctrl+C)"
-exec uv run --python 3.13 --no-dev uvicorn stt.app:app --host 127.0.0.1 --port 8765
+uv sync --python 3.13 --extra hf --no-dev
+echo "STT AI 0.2.0: http://127.0.0.1:8765 (ukončení: Ctrl+C)"
+exec uv run --python 3.13 --extra hf --no-dev uvicorn stt.app:app --host 127.0.0.1 --port 8765

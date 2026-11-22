@@ -17,6 +17,8 @@ from pydantic import BaseModel, Field, model_validator
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .engine import Engine, MODELS, hardware
+from . import __version__
+from .models import ModelLibrary, resolve_spec
 from .formats import format_transcript
 
 ROOT = Path(__file__).resolve().parent
@@ -101,16 +103,18 @@ async def lifespan(app):
     for path in uploads.glob("*"):
         if path.is_file():
             path.unlink()
-    app.state.engine = Engine(DATA / "models")
+    app.state.models = ModelLibrary(DATA / "model-library")
+    app.state.engine = Engine(DATA / "models", app.state.models)
     app.state.queue = queue.Queue()
     app.state.slots = threading.BoundedSemaphore(8)
     worker = threading.Thread(target=work, args=(app,), daemon=True)
     worker.start()
     yield
     app.state.queue.put(None)
+    app.state.models.close()
 
 
-app = FastAPI(title="STT AI", lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(title="STT AI", version=__version__, lifespan=lifespan, docs_url=None, redoc_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "testserver"])
 
 
@@ -142,7 +146,42 @@ def index():
 
 @app.get("/api/info")
 def info():
-    return {"hardware": hardware(), "models": MODELS, "max_upload_mb": MAX_BYTES // (1024 * 1024)}
+    return {"version": __version__, "hardware": hardware(), "models": MODELS,
+            "max_upload_mb": MAX_BYTES // (1024 * 1024)}
+
+
+@app.get("/api/models")
+def model_catalog():
+    return app.state.models.catalog()
+
+
+class NewModel(BaseModel):
+    repo_id: str = Field(min_length=3, max_length=250)
+    format: Literal["transformers", "ctranslate2", "mlx"]
+    name: str = Field(default="", max_length=100)
+
+
+@app.post("/api/models", status_code=201)
+def register_model(body: NewModel):
+    try:
+        return app.state.models.register(body.repo_id, body.format, body.name)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+class DownloadModel(BaseModel):
+    model_id: str = Field(min_length=1, max_length=100)
+    device: Literal["auto", "cpu", "cuda", "mlx", "mps"] = "auto"
+
+
+@app.post("/api/models/download", status_code=202)
+def download_model(body: DownloadModel):
+    try:
+        spec = resolve_spec(app.state.models.get(body.model_id), body.device, hardware())
+        app.state.models.enqueue(spec)
+        return {"ok": True, "model_id": body.model_id, "format": spec["format"], "device": spec["device"]}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.get("/api/jobs")
@@ -158,13 +197,18 @@ def get_job(job_id: str):
 
 @app.post("/api/jobs", status_code=202)
 async def upload(file: UploadFile = File(...),
-                 model: Literal["tiny", "base", "small", "medium", "large-v3", "turbo"] = Form("small"),
-                 device: Literal["auto", "cpu", "cuda", "mlx"] = Form("auto"),
+                 model: str = Form("small", max_length=100),
+                 device: Literal["auto", "cpu", "cuda", "mlx", "mps"] = Form("auto"),
                  language: Literal["cs", "sk", "en", "de", "pl", "uk", "auto"] = Form("cs"),
                  prompt: str = Form("", max_length=1000)):
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in EXTENSIONS:
         raise HTTPException(415, "Nepodporovaný formát. Vyberte audio nebo video soubor.")
+    try:
+        selected_model = app.state.models.get(model)
+        resolve_spec(selected_model, device, hardware())
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     if not app.state.slots.acquire(blocking=False):
         raise HTTPException(429, "Fronta je plná (8 souborů). Počkejte na dokončení přepisu.")
     job_id = uuid4().hex
@@ -183,6 +227,7 @@ async def upload(file: UploadFile = File(...),
         job = {"id": job_id, "filename": (file.filename or "audio")[:255], "created": time.time(),
                "status": "queued", "progress": 0, "model": model, "requested_device": device,
                "language": "" if language == "auto" else language, "prompt": prompt,
+               "model_name": selected_model["name"], "processed_seconds": 0,
                "segments": [], "error": None}
         app.state.store.put(job)
         app.state.queue.put((job_id, path))

@@ -1,121 +1,127 @@
-# STT AI — lokální přepis nahrávek
+# STT AI 0.2.0 — lokální přepis audia
 
-Česká webová aplikace pro převod nahraného audia na text pomocí modelů Whisper. Prohlížeč zobrazuje rozhraní, inference probíhá v Pythonu na počítači, kde běží server. Není potřeba účet, API klíč ani placená cloudová služba.
+Česká webová aplikace pro přepis nahrávek pomocí Whisperu. V prohlížeči nahrajete soubor, AI ho zpracuje na vašem počítači. Není potřeba cloudový přepis, účet ani placené API.
 
-## Co aplikace umí
+**Novinky 0.2.0:** procenta přepisu i na Macu, správa a stahování modelů a podpora [mikr/whisper-large-v3-czech-cv13](https://huggingface.co/mikr/whisper-large-v3-czech-cv13). [Úplný popis verzí](CHANGELOG.md).
 
-- Nahrání souboru přetažením nebo výběrem, náhled přehrávače před odesláním.
-- MP3, M4A, WAV, AAC, FLAC, OGG, Opus, AIFF, WMA, WebM a MP4; přepisuje se zvuková stopa. Skutečná podpora závisí na dekodéru a kodeku souboru.
-- Čeština, slovenština, angličtina, němčina, polština, ukrajinština; automatická detekce dalších jazyků podporovaných Whisperem.
-- Modely Tiny, Base, Small, Medium, Large v3 a Turbo.
-- Apple Silicon GPU přes MLX, NVIDIA CUDA GPU přes faster-whisper, CPU včetně Apple ARM přes faster-whisper INT8.
-- Pomocný kontext pro vlastní jména a odborné výrazy.
-- Fronta nejvýše 8 současně přijatých úloh; inference vždy po jedné, aby se zbytečně nepřeplňovala paměť.
-- Místní historie v SQLite, opravy textu jednotlivých časových úseků.
-- Export upraveného přepisu do TXT, SRT, VTT a JSON. Export automaticky uloží aktuální úpravy.
+## Spuštění na Macu s Apple Silicon
 
-Aktuální verze nepřiřazuje mluvčí, nenahrává přímo z mikrofonu a nepřekládá ani neshrnuje. Časové značky v titulcích odpovídají úsekům modelu, nikoli jednotlivým slovům. Přepis zkontrolujte, zvlášť jména, čísla a odborné výrazy.
-
-## Nejrychlejší spuštění na Macu M1/M2/M3/M4 a novějším
-
-Potřebujete macOS podporovaný aktuálním balíčkem MLX (minimálně macOS 14 pro tuto aplikaci), Apple Silicon a internet pro instalaci a první stažení každého modelu. Nainstalujte [Homebrew](https://brew.sh), pokud jej ještě nemáte.
-
-V Terminálu:
+Nainstalujte [Homebrew](https://brew.sh), pokud ho ještě nemáte. V Terminálu:
 
 ```bash
 brew install uv ffmpeg
-cd /Users/ok2clj/Documents/Codex/STT
+git clone https://github.com/ok2clj/STT_AI.git
+cd STT_AI
 ./start.command
 ```
 
-Pokud jste aplikaci rozbalili jinam, v příkazu `cd` použijte cestu ke své složce. Při chybě oprávnění spusťte `bash start.command`. Soubor `start.command` lze také otevřít z Finderu.
+Pokud už máte projekt v původní pracovní složce, stačí v ní spustit `./start.command` (při chybě oprávnění `bash start.command`). Spouštěč připraví Python 3.13, vlastní prostředí a rozšíření pro české modely. První instalace může chvíli trvat, protože instaluje i PyTorch a Transformers.
 
-Spouštěč připraví Python 3.13, oddělené prostředí a závislosti. Poté v prohlížeči otevřete:
+Otevřete **http://127.0.0.1:8765**, Terminál ponechte běžet; ukončení Ctrl+C. Server spouštějte jen jednou, s jedním Uvicorn workerem.
 
-**http://127.0.0.1:8765**
+Pro základní modely na MacBooku Air M2 doporučujeme začít modelem **Small** a zpracováním **Automaticky**. Tato volba použije MLX. Větší modely vyžadují výrazně více paměti. MLX potřebuje macOS a Apple Silicon s podporou Metal; PyTorch MPS používá vlastní podporu Apple GPU.
 
-Terminál ponechte otevřený, ukončení je Ctrl+C. Pro váš MacBook Air M2 začněte modelem **Small** a volbou **Automaticky**. Ta zvolí Apple GPU přes MLX. Pro porovnání můžete ručně vybrat **CPU · včetně ARM**. Větší modely potřebují více sjednocené paměti; zejména při 8 GB RAM začínejte malým modelem.
+## Jak použít český model mikr
 
-První přepis může trvat déle kvůli stahování vah. MLX zobrazuje neurčitý indikátor průběhu, faster-whisper průběh podle již přepsané délky audia. Žádná z těchto hodnot není odhad času do dokončení.
+1. Spusťte aktualizovanou aplikaci pomocí `start.command` / `start.ps1`.
+2. Nechte zpracování **Automaticky** a otevřete **Správa a stahování modelů** pod formulářem.
+3. U **Čeština · mikr Large v3 CV13** zvolte **Stáhnout**. Samotné váhy modelu mají přibližně 3,22 GB; počítejte i s dalšími soubory a vyšší spotřebou RAM za běhu.
+4. Po stažení klikněte **Použít**, vyberte jazyk **Čeština**, nahrajte audio a spusťte přepis.
 
-## Windows
+Jde o původní checkpoint Transformers, proto se na Apple GPU používá **MPS**, na NVIDIA **CUDA**, případně **CPU**. Není to model MLX ani CTranslate2; volba neslučitelného formátu skončí srozumitelnou chybou. Konverze není potřeba a aplikace nic netrénuje.
 
-Nainstalujte [uv](https://docs.astral.sh/uv/getting-started/installation/) a [FFmpeg](https://ffmpeg.org/download.html). FFmpeg musí být v PATH; pro faster-whisper se běžná média dekódují přibaleným PyAV, samostatný FFmpeg je nutný zejména pro MLX na Macu.
+Model je specializovaný fine-tuning Whisper Large v3. Lepší kvalitu proti základnímu modelu nelze zaručit pro každý typ nahrávky; porovnejte ho na svých datech. Použití se řídí podmínkami autora modelu.
 
-V PowerShellu ve složce aplikace:
+## Přidání dalších modelů
+
+Ve správě modelů zadejte `autor/model` nebo odkaz na hlavní stránku Hugging Face modelu, vyberte skutečný formát vah a případně vlastní název. Potom model stáhněte a použijte.
+
+| Formát v aplikaci | Co musí repozitář obsahovat | Zpracování |
+| --- | --- | --- |
+| Transformers | Whisper `config.json`, kompletní processor/tokenizer a `model*.safetensors` | CPU, NVIDIA CUDA, Apple MPS |
+| CTranslate2 | Konvertovaný Whisper s `model.bin`, `config.json`, `tokenizer.json` | CPU INT8 nebo NVIDIA CUDA FP16 |
+| MLX | Whisper MLX konfiguraci s `n_mels` a váhy `weights.npz` nebo `weights.safetensors` | Apple GPU MLX |
+| Základní Whisper | Katalog Tiny, Base, Small, Medium, Large v3, Turbo | Automaticky MLX na Macu, jinak CTranslate2 |
+
+Podporovány jsou kompletní modely Whisper, nikoli libovolné ASR modely, GGUF nebo samostatné LoRA adaptéry. Soukromé/gated repozitáře vyžadují předem dostupné oprávnění v Hugging Face cache/konfiguraci prostředí; aplikace neobsahuje přihlašovací formulář.
+
+U základních modelů se při stažení zvolí formát podle aktuálního nastavení **Zpracování**. MLX a CTranslate2 jsou odlišné váhy: stažený model pro CPU není automaticky připravený pro MLX. Stav stažení zobrazuje počet dokončených souborů, nikoli bajty; velký soubor může trvat déle než všechny malé dohromady. Při chybě lze stažení zopakovat.
+
+## Co znamenají procenta
+
+- Nejdříve aplikace ukazuje **frontu → přípravu/stažení modelu → načítání modelu → načítání audia**. Tyto fáze nemají procenta přepisu.
+- Při přepisu vidíte velké procento a **zpracovaný čas / celkovou délku audia**. Údaje jsou dostupné i při návratu k úloze z historie.
+- Průběh se počítá z dokončených úseků nahrávky, dlouhých nejvýše 30 sekund. Ticho se započítává stejně jako řeč. Nejde o odhad zbývajícího času.
+- Po každém úseku se procenta změní; během náročného výpočtu jednoho úseku mohou stát. Nahrávka kratší než 30 sekund může přejít z 0 % rovnou na dokončení.
+- **100 %** se uloží až s dokončeným výsledkem po odstranění pracovní kopie audia. Do té doby je horní hranice 99 %.
+
+Nahrávka se dekóduje do paměti. Přepis po samostatných úsecích může ovlivnit návaznost slov na jejich hranicích. Výsledek, jména, čísla a časové značky před dalším použitím zkontrolujte.
+
+## Další funkce
+
+- Nahrání přetažením, náhled audia před odesláním. MP3, M4A, WAV, AAC, FLAC, OGG, Opus, AIFF, WMA, WebM a MP4 podle podpory dekodéru PyAV.
+- Čeština, slovenština, angličtina, němčina, polština, ukrajinština a automatická detekce dalších jazyků Whisperu.
+- Vlastní kontext pro jména a odborné výrazy.
+- Nejvýše 8 přijatých přepisů ve frontě; inference vždy po jedné. Stahování má samostatnou omezenou frontu.
+- Historie v SQLite, úpravy textu časových úseků a export TXT, SRT, VTT, JSON. Export automaticky ukládá úpravy.
+- Aktuálně bez rozlišení mluvčích, přímého nahrávání mikrofonu, překladu a shrnování.
+
+## Windows a Linux
+
+Nainstalujte [uv](https://docs.astral.sh/uv/getting-started/installation/). Na Windows ve složce projektu spusťte v PowerShellu:
 
 ```powershell
 .\start.ps1
 ```
 
-Pokud místní pravidla PowerShellu skript nepovolí, použijte přímo:
+Pokud místní pravidla PowerShellu skript nepovolí, spusťte přímo:
 
 ```powershell
-uv sync --python 3.13 --no-dev
-uv run --python 3.13 --no-dev uvicorn stt.app:app --host 127.0.0.1 --port 8765
+uv sync --python 3.13 --extra hf --no-dev
+uv run --python 3.13 --extra hf --no-dev uvicorn stt.app:app --host 127.0.0.1 --port 8765
 ```
 
-Tato přímá varianta ukládá cache modelů také do výchozích uživatelských cache Hugging Face, namísto jejich soustředění do `data/` spouštěčem.
+Na Linuxu použijte `bash start.command` nebo stejné přímé příkazy. Rozhraní je vždy http://127.0.0.1:8765. Dekódování zajišťuje PyAV; samostatný FFmpeg už není pro přepis MLX potřeba.
 
-## Linux
+### GPU NVIDIA
 
-Nainstalujte uv a případně FFmpeg z balíčků své distribuce. Ve složce aplikace spusťte:
+CTranslate2/faster-whisper vyžaduje podporovanou GPU, ovladač a aktuálně CUDA 12/cuBLAS + cuDNN 9. Viz [oficiální dokumentace](https://github.com/SYSTRAN/faster-whisper#gpu). Transformers vyžaduje **PyTorch s podporou CUDA**, jehož konkrétní instalaci vyberte podle [oficiálního návodu PyTorch](https://pytorch.org/get-started/locally/). Samotné `nvidia-smi` nepotvrzuje přítomnost všech runtime knihoven.
+
+Pokud CPU balíček PyTorch CUDA nepodporuje, aplikace zobrazí chybu. Chyby GPU se nezamlčují automatickým přechodem na CPU. Pro ručně upravené prostředí spouštějte `.venv/bin/python -m uvicorn stt.app:app --host 127.0.0.1 --port 8765` (na Windows `.venv\Scripts\python.exe -m uvicorn ...`); `uv sync` může balíčky doplněné mimo definici projektu změnit. AMD/ROCm a Intel GPU nejsou v této verzi implementované.
+
+## Ruční instalace a offline provoz
 
 ```bash
-bash start.command
+uv sync --python 3.13 --extra hf
+uv run --python 3.13 --extra hf uvicorn stt.app:app --host 127.0.0.1 --port 8765
 ```
 
-## NVIDIA GPU na Windows/Linuxu
+Pro základní MLX/CTranslate2 bez Transformers lze vynechat `--extra hf`. Český model mikr a další Transformers modely pak při použití oznámí chybějící rozšíření.
 
-Inference používá CTranslate2/faster-whisper. Je potřeba podporovaná NVIDIA GPU, ovladač a odpovídající runtime knihovny. Aktuální řada CTranslate2 požaduje **CUDA 12 (cuBLAS) a cuDNN 9**. GPU používá FP16; CPU INT8. Přesné požadavky kontrolujte v [oficiálním návodu faster-whisper](https://github.com/SYSTRAN/faster-whisper#gpu).
+Po kompletním stažení konkrétního modelu lze před startem nastavit `HF_HUB_OFFLINE=1`. Stažené snapshoty se při přepisu načítají lokálně. Při ručním spuštění respektují Transformers/MLX standardní Hugging Face cache; spouštěče ji směrují pod `data/huggingface/`. CTranslate2 zachovává původní umístění `data/models/`, takže lze využít dříve stažené základní modely.
 
-Na Linuxu lze runtime knihovny přidat do prostředí aplikace:
+## Data a soukromí
 
-```bash
-uv pip install --python .venv/bin/python nvidia-cublas-cu12 'nvidia-cudnn-cu12==9.*'
-export LD_LIBRARY_PATH="$(.venv/bin/python -c 'import os, nvidia.cublas.lib, nvidia.cudnn.lib; print(os.path.dirname(nvidia.cublas.lib.__file__) + ":" + os.path.dirname(nvidia.cudnn.lib.__file__))')${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-.venv/bin/python -m uvicorn stt.app:app --host 127.0.0.1 --port 8765
-```
+- Server přijímá pouze místní hostnames a stejný webový origin; standardně naslouchá na `127.0.0.1`. Jde o osobní aplikaci **bez přihlašování**, dostupnou místním uživatelům/procesům s přístupem k portu.
+- Audio se zpracovává na serveru, nikoli GPU zařízení, na kterém máte otevřený prohlížeč. Zvuk se neposílá poskytovateli modelu.
+- Po dokončení nebo chybě se pracovní audio odstraní; zdrojový soubor se nemění. Zbytky po pádu procesu se odstraní při dalším startu.
+- Text, názvy nahrávek a pomocný kontext zůstávají v `data/transcripts.sqlite3` do smazání přepisu. SQLite mazání nezaručuje bezpečné odstranění z disku, záloh či snapshotů.
+- Vlastní katalog a stav stažení jsou v `data/model-library/catalog.json`. Stažené modely zůstávají v cache i po smazání přepisu. Odstranění modelů z UI zatím není implementované.
+- Rozhraní nepoužívá externí fonty, analytiku ani CDN. Spouštěče vypínají běžnou telemetrii Hugging Face a směrují pomocné soubory pod `data/`.
+- Limit souboru je 500 MiB (`STT_MAX_UPLOAD_MB`). `STT_DATA_DIR` mění umístění databáze, modelového katalogu, audia a CTranslate2 cache; cache Transformers/MLX se nastavuje zvlášť přes `HF_HOME`.
+- Po restartu se přerušený přepis označí chybou a vyžaduje nové nahrání souboru. Přerušené stažení lze zopakovat.
 
-Po ručním přidání knihoven použijte poslední příkaz přímo: další `uv sync` může balíčky, které nejsou v projektu deklarované, odstranit. Na Windows použijte postup instalace CUDA/cuDNN z oficiální dokumentace a doplňte adresáře DLL do PATH. `nvidia-smi` samo o sobě nepotvrzuje přítomnost cuDNN.
-
-Volba Automaticky vybere NVIDIA GPU, pokud ji CTranslate2 detekuje. Pokud knihovny chybějí nebo dojde paměť, úloha zobrazí chybu. Přepnutí na CPU je ruční, aby se nezamlčela chyba GPU. Podpora AMD/ROCm a Intel GPU v této verzi není implementována.
-
-## Data, offline provoz a přístup
-
-- Server se standardně váže pouze na `127.0.0.1`; jde o osobní aplikaci bez přihlašování. Otevře ji libovolný místní uživatel nebo proces s přístupem k tomuto portu.
-- Rozhraní nevyužívá externí fonty, analytiku ani CDN.
-- Zvuk se odesílá na lokální server, nikoli do služby pro přepis. Po dokončení nebo chybě se pracovní kopie audia odstraní; zdrojový soubor na disku se nemění. Při pádu procesu se zbytky odstraní při dalším startu.
-- Text, názvy souborů a pomocný kontext zůstávají v `data/transcripts.sqlite3`, dokud přepis nesmažete. SQLite mazání není garantované bezpečné vymazání z disku, záloh či snapshotů.
-- Spouštěče ukládají modely a pomocné soubory pod `data/`, nastavují `HF_HOME` a vypínají běžnou telemetrii Hugging Face. Při ručním spuštění může MLX používat výchozí uživatelskou cache.
-- Po stažení modelu lze vynutit offline režim: před startem nastavte `HF_HUB_OFFLINE=1`. Nejdříve musí být konkrétní model pro konkrétní backend kompletně stažený. CPU/CUDA a MLX používají odlišné formáty vah.
-- Limit souboru je 500 MiB; lze změnit proměnnou `STT_MAX_UPLOAD_MB`. Komprimovaný soubor se při dekódování může výrazně zvětšit v RAM.
-- `STT_DATA_DIR` umožňuje změnit umístění databáze, pracovního audia a faster-whisper modelů. Pro změnu cache MLX nastavte rovněž `HF_HOME`.
-- Spouštějte **jednu instanci a jeden Uvicorn worker** pro jeden adresář dat. Po restartu se rozpracované úlohy označí chybou a je třeba je nahrát znovu.
-
-Pro přístup z telefonu nebo dalších počítačů by bylo potřeba doplnit autentizaci, HTTPS a správu přístupů; aktuální nastavení záměrně přijímá pouze místní hostnames a stejný webový origin. Inference využívá hardware serveru, nikoli GPU telefonu, na kterém máte otevřený prohlížeč.
+Pro přístup z dalších zařízení je potřeba doplnit autentizaci, HTTPS a odpovídající síťové nastavení.
 
 ## Testy a stav ověření
 
-Testy jádra bez instalace závislostí:
-
 ```bash
-python3 -m unittest discover -s tests -p test_core.py -v
+uv sync --python 3.13 --extra hf
+uv run --extra hf python -m unittest discover -s tests -v
 ```
 
-Celá sada včetně API:
+Prošlo **29 testů** včetně skutečných ASGI rout/middleware/fronty, pollingu průběhu, exportů, validace a katalogu. Inference a síťová stažení jsou nahrazené testovacími implementacemi; testy nepotvrzují kvalitu skutečného českého přepisu. Ověřena je i syntaxe Pythonu, JavaScriptu a Bash a návaznost HTML prvků na skript.
 
-```bash
-uv sync --python 3.13
-uv run pytest -q
-```
+Vývojové prostředí aktuálně blokuje síťové stahování nových balíčků a neposkytuje přístup k Metal GPU. **Nový český model ani skutečné GPU zpracování zde nebyly spuštěny.** Závislosti pro v0.2.0 se uzamknou při prvním úspěšném `uv sync`; do repozitáře není vložen neověřený starší lockfile.
 
-Při vytvoření aplikace prošlo 8 testů jádra (formáty, české znaky, časové značky, volba backendu a nastavení inference s náhradními modely). Ověřena je syntaxe Pythonu, JavaScriptu a Bash spouštěče i návaznost odkazů rozhraní na HTML prvky a lokální soubory. API testy jsou přiložené, ale nebyly spuštěny: prostředí blokovalo DNS/přístup na PyPI a závislosti nešlo nainstalovat. **Skutečný přepis ani běh GPU zatím nebyl na tomto počítači ověřen.** Soubor `uv.lock` vznikne při prvním úspěšném `uv sync`; přesné verze závislostí tedy zatím nejsou uzamčené.
-
-## Technologie
-
-- [faster-whisper](https://github.com/SYSTRAN/faster-whisper): NVIDIA CUDA a CPU, lokální modely Whisper.
-- [MLX Whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper): akcelerace na Apple Silicon GPU.
-- FastAPI, SQLite, čistý HTML/CSS/JavaScript bez sestavování frontendu.
-
-Licence a případné podmínky použitých modelů a knihoven se řídí jejich vlastními repozitáři.
+Technologie: [faster-whisper](https://github.com/SYSTRAN/faster-whisper), [MLX Whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper), [Transformers Whisper](https://huggingface.co/docs/transformers/model_doc/whisper), PyTorch, FastAPI, SQLite, HTML/CSS/JavaScript. Licence modelů a knihoven se řídí jejich vlastními podmínkami.
