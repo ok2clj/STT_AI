@@ -1,6 +1,8 @@
-# STT AI 0.2.0 — lokální přepis audia
+# STT AI 0.2.1 — lokální přepis audia
 
 Česká webová aplikace pro přepis nahrávek pomocí Whisperu. V prohlížeči nahrajete soubor, AI ho zpracuje na vašem počítači. Není potřeba cloudový přepis, účet ani placené API.
+
+**Oprava 0.2.1:** odstraněna chyba `metadata_errors` při načítání audia s PyAV 19. Aktualizujte projekt, zastavte původní server a spusťte znovu `start.command` / `start.ps1`. Stažené modely i historii můžete zachovat.
 
 **Novinky 0.2.0:** procenta přepisu i na Macu, správa a stahování modelů a podpora [mikr/whisper-large-v3-czech-cv13](https://huggingface.co/mikr/whisper-large-v3-czech-cv13). [Úplný popis verzí](CHANGELOG.md).
 
@@ -120,8 +122,8 @@ uv sync --python 3.13 --extra hf
 uv run --extra hf python -m unittest discover -s tests -v
 ```
 
-Prošlo **29 testů** včetně skutečných ASGI rout/middleware/fronty, pollingu průběhu, exportů, validace a katalogu. Inference a síťová stažení jsou nahrazené testovacími implementacemi; testy nepotvrzují kvalitu skutečného českého přepisu. Ověřena je i syntaxe Pythonu, JavaScriptu a Bash a návaznost HTML prvků na skript.
+Prošlo **35 testů** včetně skutečných ASGI rout/middleware/fronty, pollingu průběhu, exportů, validace a katalogu. Inference a síťová stažení jsou nahrazené testovacími implementacemi; testy nepotvrzují kvalitu skutečného českého přepisu. Šest regresních testů navíc ověřuje skutečné dekódování WAV souborů a zapojení dekodéru do enginu na PyAV 19.0.2. Ověřena je i syntaxe Pythonu, JavaScriptu a Bash a návaznost HTML prvků na skript.
 
-Vývojové prostředí aktuálně blokuje síťové stahování nových balíčků a neposkytuje přístup k Metal GPU. **Nový český model ani skutečné GPU zpracování zde nebyly spuštěny.** Závislosti pro v0.2.0 se uzamknou při prvním úspěšném `uv sync`; do repozitáře není vložen neověřený starší lockfile.
+Vývojové prostředí aktuálně blokuje síťové stahování nových balíčků a neposkytuje přístup k Metal GPU. **Nový český model ani skutečné GPU zpracování zde nebyly spuštěny.** Závislosti pro v0.2.1 se uzamknou při prvním úspěšném `uv sync`; do repozitáře není vložen neověřený starší lockfile.
 
 Technologie: [faster-whisper](https://github.com/SYSTRAN/faster-whisper), [MLX Whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper), [Transformers Whisper](https://huggingface.co/docs/transformers/model_doc/whisper), PyTorch, FastAPI, SQLite, HTML/CSS/JavaScript. Licence modelů a knihoven se řídí jejich vlastními podmínkami.

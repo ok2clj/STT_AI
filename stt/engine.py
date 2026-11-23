@@ -74,7 +74,7 @@ class Engine:
         progress(status='loading')
         infer = self._load(spec, model_path)
         progress(status='decoding')
-        from faster_whisper.audio import decode_audio
+        from .audio import decode_audio
         audio = decode_audio(str(path), sampling_rate=SAMPLE_RATE)
         duration = len(audio) / SAMPLE_RATE
         if not duration:

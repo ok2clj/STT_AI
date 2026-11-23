@@ -47,7 +47,7 @@ class EngineTests(unittest.TestCase):
                                   ([], 'cs'), ([{'start':0,'end':10,'text':'Konec.'}], 'cs')])
         progress = Mock()
         with patch('stt.engine.hardware', return_value={'cuda':False}), \
-             patch.dict('sys.modules', {'faster_whisper.audio': SimpleNamespace(
+             patch.dict('sys.modules', {'stt.audio': SimpleNamespace(
                  decode_audio=lambda *a, **k: [0] * (65 * 16000))}):
             engine=Engine(Path('/tmp/models'), library)
             with patch.object(engine, '_load', return_value=infer):
@@ -76,7 +76,7 @@ class EngineTests(unittest.TestCase):
         engine=Engine(Path('/tmp/models'),library)
         with patch('stt.engine.hardware',return_value={'cuda':False}), \
              patch.object(engine,'_load',return_value=infer), \
-             patch.dict('sys.modules',{'faster_whisper.audio':SimpleNamespace(
+             patch.dict('sys.modules',{'stt.audio':SimpleNamespace(
                  decode_audio=lambda *a,**k:[0]*(31*16000))}):
             result=engine.transcribe('x','small','cpu','','',Mock())
         self.assertIsNone(infer.call_args_list[1].args[1])
@@ -88,7 +88,7 @@ class EngineTests(unittest.TestCase):
         engine=Engine(Path('/tmp/models'),library)
         with patch('stt.engine.hardware',return_value={'cuda':False}), \
              patch.object(engine,'_load'), \
-             patch.dict('sys.modules',{'faster_whisper.audio':SimpleNamespace(decode_audio=lambda *a,**k: [])}):
+             patch.dict('sys.modules',{'stt.audio':SimpleNamespace(decode_audio=lambda *a,**k: [])}):
             with self.assertRaisesRegex(ValueError,'vzorky'):
                 engine.transcribe('x','tiny','cpu','cs','',Mock())
 

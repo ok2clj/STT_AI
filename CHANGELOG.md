@@ -1,5 +1,18 @@
 # Popis verzí
 
+## 0.2.1 — Oprava dekódování audia s PyAV 19
+
+- Opravena chyba `TypeError: open() got an unexpected keyword argument 'metadata_errors'`, která blokovala načtení audia ještě před přepisem. Starší dekodér faster-whisper používal parametr odstraněný v PyAV 19.
+- Aplikace nyní používá vlastní malý dekodér nad veřejným API PyAV, bez parametru `metadata_errors` a bez úprav knihoven v prostředí uživatele. Podporuje i instalovaný PyAV 19; downgrade není potřeba.
+- Zachováno dekódování na mono float32 při 16 kHz pro všechny backendy. Resampler se na konci vyprázdní, aby se neztratily poslední vzorky audia. Prázdné a poškozené nahrávky se rozlišují.
+- PyAV a NumPy jsou uvedeny jako přímé závislosti aplikace; podporovaná řada PyAV je `>=11,<20`.
+- Přidáno šest regresních testů: skutečný WAV, stereo převzorkování a úplná délka výstupu, ticho, prázdný WAV, poškozený soubor a napojení skutečného dekodéru na engine s náhradní inferencí.
+- Prošlo celkem **35 testů**. Skutečné dekódování ověřeno na PyAV **19.0.2**; kvalita inference ani GPU nejsou předmětem této opravy.
+
+### Aktualizace
+
+Aktualizujte soubory projektu, ukončete původně běžící server a znovu spusťte `start.command` nebo `start.ps1`. Neúspěšnou nahrávku nahrajte znovu: pracovní audio se při chybě odstraňuje. Existující přepisy a stažené modely není potřeba mazat.
+
 ## 0.2.0 — Procenta přepisu a vlastní české modely (22. 11. 2026)
 
 ### Nové funkce
